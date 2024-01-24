@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: porkbun
+type: Opaque
+stringData:
+  apiKey: "1234567890"
+  apiSecretKey: "0987654321"
