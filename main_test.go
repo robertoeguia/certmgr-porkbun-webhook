@@ -23,7 +23,7 @@ func TestRunsSuite(t *testing.T) {
 		acmetest.SetAllowAmbientCredentials(false),
 		acmetest.SetManifestPath("testdata/porkbun"),
 		//acmetest.SetUseAuthoritative(false),
-		acmetest.SetStrict(false),
+		acmetest.SetStrict(true),
 	)
 	// solver := example.New("59351")
 	// fixture := acmetest.NewFixture(solver,
@@ -36,5 +36,4 @@ func TestRunsSuite(t *testing.T) {
 	// fixture.RunBasic(t)
 	// fixture.RunExtended(t)
 	fixture.RunConformance(t)
-	
 }

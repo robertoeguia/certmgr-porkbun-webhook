@@ -46,22 +46,22 @@ func main() {
 }
 
 type porkbunRecord struct {
-	ID		string	`json:id`
-	Name	string	`json:name`
-	Type	string	`json:type`
-	Content	string	`json:content`
-	TTL		string	`json:ttl`
-	Prio	string	`json:prio`
-	Notes	string	`json:notes`
+	ID		string	`json:"id"`
+	Name	string	`json:"name"`
+	Type	string	`json:"type"`
+	Content	string	`json:"content"`
+	TTL		string	`json:"ttl"`
+	Prio	string	`json:"prio"`
+	Notes	string	`json:"notes"`
 }
 
 type porkbunCreateUpdateRecord struct {
-	SecretAPIKey	string	`json:secretapikey`
-	APIKey			string	`json:apikey`
-	Name			string	`json:name`
-	TTL				string	`json:ttl`
-	Type			string	`json:type`
-	content			string	`json:content`
+	SecretAPIKey	string	`json:"secretapikey"`
+	APIKey			string	`json:"apikey"`
+	Name			string	`json:"name"`
+	TTL				string	`json:"ttl"`
+	Type			string	`json:"type"`
+	Content			string	`json:"content"`
 }
 
 // porkbunDNSSolver implements the provider-specific logic needed to
@@ -187,7 +187,7 @@ func (c *porkbunDNSSolver) searchRecords(cfg *porkbunDNSProviderConfig, ch *v1al
 
 	for _, item := range result["records"].([]interface{}) {
 		if record,ok := item.(map[string]any); ok {
-			if record["name"] == fqdn{
+			if record["name"] == fqdn && record["content"] == ch.Key {
 				log.Printf("Existing record found: %v", record)
 				return &porkbunRecord{
 					ID: record["id"].(string),
@@ -195,8 +195,6 @@ func (c *porkbunDNSSolver) searchRecords(cfg *porkbunDNSProviderConfig, ch *v1al
 					Type: record["type"].(string),
 					Content: record["content"].(string),
 					TTL: record["ttl"].(string),
-					// Prio: record["prio"].(string),
-					// Notes: record["notes"].(string),
 				},nil
 			}
 		}
@@ -215,13 +213,13 @@ func (c *porkbunDNSSolver) addTxtRecord(cfg *porkbunDNSProviderConfig, ch *v1alp
 	apiEndpoint := fmt.Sprintf("%v/dns/create/%v",porkbunURIEndpoint, zone)
 	log.Println(apiEndpoint)
 
-	body := map[string]string{
-		"secretapikey": cfg.APISecretKey,
-		"apikey": cfg.APIkey,
-		"name": name,
-		"ttl": "600",
-		"type": "TXT",
-		"content": ch.Key,
+	body := &porkbunCreateUpdateRecord{
+		SecretAPIKey: cfg.APISecretKey,
+		APIKey: cfg.APIkey,
+		Name: name,
+		TTL: "600",
+		Type: "TXT",
+		Content: ch.Key,
 	}
 	
 	jsonString,_ := json.Marshal(body)
@@ -250,13 +248,13 @@ func (c *porkbunDNSSolver) updateTxtRecord(cfg *porkbunDNSProviderConfig, ch *v1
 	apiEndpoint := fmt.Sprintf("%v/dns/edit/%v/%v", porkbunURIEndpoint, zone,r.ID)
 	log.Println(apiEndpoint)
 
-	body := map[string]string{
-		"secretapikey": cfg.APISecretKey,
-		"apikey": cfg.APIkey,
-		"name": name,
-		"ttl": "600",
-		"type": "TXT",
-		"content": ch.Key,
+	body := &porkbunCreateUpdateRecord{
+		SecretAPIKey: cfg.APISecretKey,
+		APIKey: cfg.APIkey,
+		Name: name,
+		TTL: "600",
+		Type: "TXT",
+		Content: ch.Key,
 	}
 
 	jsonString,_ := json.Marshal(body)
