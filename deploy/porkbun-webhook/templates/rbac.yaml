@@ -89,3 +89,86 @@ subjects:
     kind: ServiceAccount
     name: {{ .Values.certManager.serviceAccountName }}
     namespace: {{ .Values.certManager.namespace }}
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "porkbun-webhook.fullname" . }}
+  labels:
+    app: {{ include "porkbun-webhook.name" . }}
+    chart: {{ include "porkbun-webhook.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "porkbun-webhook.fullname" . }}
+subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: {{ include "porkbun-webhook.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "porkbun-webhook.fullname" . }}
+  labels:
+    app: {{ include "porkbun-webhook.name" . }}
+    chart: {{ include "porkbun-webhook.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+rules:
+  - apiGroups:
+      - ''
+    resources:
+      - 'secrets'
+    verbs:
+      - 'get'
+
+---
+
+# Grant webhook permission to read the flow control mechanism
+# API Priority and Fairness is enabled by default in kubernetes > 1.20
+# https://kubernetes.io/docs/concepts/cluster-administration/flow-control/
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "porkbun-webhook.fullname" . }}:flowcontrol-solver
+  labels:
+    app: {{ include "porkbun-webhook.name" . }}
+    chart: {{ include "porkbun-webhook.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+rules:
+  - apiGroups:
+      - "flowcontrol.apiserver.k8s.io"
+    resources:
+      - "prioritylevelconfigurations"
+      - "flowschemas"
+    verbs:
+      - "list"
+      - "watch"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "porkbun-webhook.fullname" . }}:flowcontrol-solver
+  labels:
+    app: {{ include "porkbun-webhook.name" . }}
+    chart: {{ include "porkbun-webhook.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "porkbun-webhook.fullname" . }}:flowcontrol-solver
+subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: {{ include "porkbun-webhook.fullname" . }}
+    namespace: {{ .Release.Namespace }}
