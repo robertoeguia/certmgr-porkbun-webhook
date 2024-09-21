@@ -1,4 +1,4 @@
-name: Docker
+name: container-ci
 
 # This workflow uses actions that are not certified by GitHub.
 # They are provided by a third-party and are governed by
@@ -7,7 +7,6 @@ name: Docker
 
 on:
   push:
-    branches: [ "main" ]
     # Publish semver tags as releases.
     tags: [ 'v*.*.*' ]
   pull_request:
@@ -66,19 +65,24 @@ jobs:
         uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=true
+          tags: |
+            type=semver,pattern=v{{version}}
+        
 
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
-      #- name: Build and push Docker image
-      #  id: build-and-push
-      #  uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
-      #  with:
-      #    context: .
-      #    push: ${{ github.event_name != 'pull_request' }}
-      #    tags: ${{ steps.meta.outputs.tags }}
-      #    labels: ${{ steps.meta.outputs.labels }}
-      #    cache-from: type=gha
-      #    cache-to: type=gha,mode=max
+      - name: Build and push Docker image
+        id: build-and-push
+        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       # Sign the resulting Docker image digest except on PRs.
       # This will only write to the public Rekor transparency log when the Docker
