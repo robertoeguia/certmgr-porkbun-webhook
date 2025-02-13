@@ -1,6 +1,7 @@
 GO ?= $(shell which go)
 OS ?= $(shell $(GO) env GOOS)
 ARCH ?= $(shell $(GO) env GOARCH)
+DELVE ?= $(shell which dlv)
 
 IMAGE_NAME := "webhook"
 IMAGE_TAG := "latest"
