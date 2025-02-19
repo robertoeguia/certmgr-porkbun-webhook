@@ -172,25 +172,27 @@ func (c *porkbunDNSSolver) searchRecords(cfg *porkbunDNSProviderConfig, ch *v1al
 		"apikey":       cfg.APIkey,
 	}
 
-	log.Println("Searching porkbun for existing record")
+	log.Printf("Searching porkbun for existing record: %v", fqdn)
 
 	request.SetBody(body)
 	response, err := request.Post(apiEndpoint)
 
 	if err != nil {
+		log.Println(err.Error())
 		return nil, err
 	}
 	if response.StatusCode() != 200 {
 		output := fmt.Sprintf("{ requested_record: '%v', ", strings.TrimRight(ch.ResolvedFQDN, "."))
 		output += fmt.Sprintf("status_code: '%v', status: '%v', ", response.StatusCode(), response.Status())
 		output += fmt.Sprintf("response: '%v' }", response.String())
-		return nil, errors.New(output)
+		err := errors.New(output)
+		log.Println(err.Error())
+		return nil, err
 	}
 
 	var result map[string]any
 
 	json.Unmarshal(response.Body(), &result)
-	log.Printf("Requested Record: %v", fqdn)
 
 	for _, item := range result["records"].([]interface{}) {
 		if record, ok := item.(map[string]any); ok {
