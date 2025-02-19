@@ -1,0 +1,37 @@
+# Docker
+# Build a Docker image
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+
+trigger:
+- main
+
+pool:
+  name: $(AGENT_POOL)
+
+steps:
+  - task: Docker@2
+    displayName: Registry Login
+    inputs:
+      containerRegistry: '$(REGISTRY)'
+      command: 'login'
+
+  - bash: |
+      # Start buildkitd
+      rootlesskit buildkitd --oci-worker-no-process-sandbox --addr $BUILDKIT_HOST &
+      # Wait for buildkitd to start
+      while ! buildctl debug workers; do sleep 1; done
+    displayName: Run BuildKit
+
+  - bash: |
+      buildctl build \
+        --frontend dockerfile.v0 \
+        --local context=. \
+        --local dockerfile=. \
+        --output type=image,name=$(IMAGE_NAME),push=true
+    displayName: Build and push the image
+
+  - task: Docker@2
+    displayName: Registry Logout
+    inputs:
+      containerRegistry: '$(REGISTRY)'
+      command: logout
