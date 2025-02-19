@@ -164,6 +164,7 @@ func (c *porkbunDNSSolver) loadApiKeys(cfg *porkbunDNSProviderConfig, ch *v1alph
 // Check if record exists
 func (c *porkbunDNSSolver) searchRecords(cfg *porkbunDNSProviderConfig, ch *v1alpha1.ChallengeRequest) (*porkbunRecord, error) {
 	request := c.restClient.NewRequest().EnableTrace()
+	fqdn := strings.TrimRight(ch.ResolvedFQDN, ".")
 	apiEndpoint := fmt.Sprintf("%v/dns/retrieve/%v", porkbunURIEndpoint, strings.TrimRight(ch.ResolvedZone, "."))
 
 	body := map[string]string{
@@ -175,11 +176,17 @@ func (c *porkbunDNSSolver) searchRecords(cfg *porkbunDNSProviderConfig, ch *v1al
 
 	request.SetBody(body)
 	response, err := request.Post(apiEndpoint)
+
 	if err != nil {
 		return nil, err
 	}
+	if response.StatusCode() != 200 {
+		output := fmt.Sprintf("{ requested_record: '%v', ", strings.TrimRight(ch.ResolvedFQDN, "."))
+		output += fmt.Sprintf("status_code: '%v', status: '%v', ", response.StatusCode(), response.Status())
+		output += fmt.Sprintf("response: '%v' }", response.String())
+		return nil, errors.New(output)
+	}
 
-	fqdn := strings.TrimRight(ch.ResolvedFQDN, ".")
 	var result map[string]any
 
 	json.Unmarshal(response.Body(), &result)
