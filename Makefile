@@ -1,6 +1,7 @@
 GO ?= $(shell which go)
 OS ?= $(shell $(GO) env GOOS)
 ARCH ?= $(shell $(GO) env GOARCH)
+DELVE ?= $(shell which dlv)
 
 IMAGE_NAME := "webhook"
 IMAGE_TAG := "latest"
@@ -8,21 +9,23 @@ TEST_ZONE_NAME ?= eguia.dev.
 
 OUT := $(shell pwd)/_out
 
-KUBEBUILDER_VERSION=1.28.0
+KUBEBUILDER_VERSION=1.32.0
 
 HELM_FILES := $(shell find deploy/porkbun-webhook)
 
-test: _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/etcd _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kube-apiserver _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kubectl
+setup: _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/etcd _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kube-apiserver _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kubectl
+
+test: setup
 	TEST_ASSET_ETCD=_test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/etcd \
 	TEST_ASSET_KUBE_APISERVER=_test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kube-apiserver \
 	TEST_ASSET_KUBECTL=_test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kubectl \
 	TEST_ZONE_NAME=$(TEST_ZONE_NAME) $(GO) test -v .
 
 _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH).tar.gz: | _test
-	curl -fsSL https://go.kubebuilder.io/test-tools/$(KUBEBUILDER_VERSION)/$(OS)/$(ARCH) -o $@
+	curl -fsSL https://github.com/kubernetes-sigs/controller-tools/releases/download/envtest-v$(KUBEBUILDER_VERSION)/envtest-v$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH).tar.gz -o $@
 
 _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/etcd _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kube-apiserver _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kubectl: _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH).tar.gz | _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)
-	tar xfO $< kubebuilder/bin/$(notdir $@) > $@ && chmod +x $@
+	tar xfO $< controller-tools/envtest/$(notdir $@) > $@ && chmod +x $@
 
 .PHONY: clean
 clean:

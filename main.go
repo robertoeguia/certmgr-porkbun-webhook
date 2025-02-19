@@ -25,8 +25,8 @@ import (
 var GroupName = os.Getenv("GROUP_NAME")
 
 const (
-	providerName = "porkbun"
-	porkbunURIEndpoint = "https://porkbun.com/api/json/v3"
+	providerName       = "porkbun"
+	porkbunURIEndpoint = "https://api.porkbun.com/api/json/v3"
 )
 
 func main() {
@@ -46,22 +46,22 @@ func main() {
 }
 
 type porkbunRecord struct {
-	ID		string	`json:"id"`
-	Name	string	`json:"name"`
-	Type	string	`json:"type"`
-	Content	string	`json:"content"`
-	TTL		string	`json:"ttl"`
-	Prio	string	`json:"prio"`
-	Notes	string	`json:"notes"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	Content string `json:"content"`
+	TTL     string `json:"ttl"`
+	Prio    string `json:"prio"`
+	Notes   string `json:"notes"`
 }
 
 type porkbunCreateUpdateRecord struct {
-	SecretAPIKey	string	`json:"secretapikey"`
-	APIKey			string	`json:"apikey"`
-	Name			string	`json:"name"`
-	TTL				string	`json:"ttl"`
-	Type			string	`json:"type"`
-	Content			string	`json:"content"`
+	SecretAPIKey string `json:"secretapikey"`
+	APIKey       string `json:"apikey"`
+	Name         string `json:"name"`
+	TTL          string `json:"ttl"`
+	Type         string `json:"type"`
+	Content      string `json:"content"`
 }
 
 // porkbunDNSSolver implements the provider-specific logic needed to
@@ -103,13 +103,13 @@ type porkbunDNSProviderConfig struct {
 	//Email           string `json:"email"`
 	APIKeysSecretRef k8sv1.SecretReference `json:"apiKeysSecretRef"`
 
-	APIkey	string	`json:"apiKey"`
+	APIkey       string `json:"apiKey"`
 	APISecretKey string `json:"apiSecretKey"`
 }
 
 // #region private
 
-// Validate necessary configurations are present before attempting to 
+// Validate necessary configurations are present before attempting to
 // create DNS record
 func (c *porkbunDNSSolver) validate(cfg *porkbunDNSProviderConfig) error {
 	if cfg.APIKeysSecretRef.Name != "" || (cfg.APIkey != "" && cfg.APISecretKey != "") {
@@ -124,59 +124,59 @@ func (c *porkbunDNSSolver) loadApiKeys(cfg *porkbunDNSProviderConfig, ch *v1alph
 
 	// If both keys are passed via issuer configuration
 	// skip loading from secret
-    if cfg.APIkey != "" && cfg.APISecretKey != "" {
-        return nil
-    }
-    
-    var ns string;
-    if cfg.APIKeysSecretRef.Namespace != "" {
-        ns = cfg.APIKeysSecretRef.Namespace
-    } else {
-        ns = ch.ResourceNamespace
-    }
+	if cfg.APIkey != "" && cfg.APISecretKey != "" {
+		return nil
+	}
 
-    sec,err := c.k8sClient.CoreV1().Secrets(ns).
-                Get(context.TODO(), cfg.APIKeysSecretRef.Name, metaV1.GetOptions{})
-    if err != nil {
-        return err
-    }
+	var ns string
+	if cfg.APIKeysSecretRef.Namespace != "" {
+		ns = cfg.APIKeysSecretRef.Namespace
+	} else {
+		ns = ch.ResourceNamespace
+	}
+
+	sec, err := c.k8sClient.CoreV1().Secrets(ns).
+		Get(context.TODO(), cfg.APIKeysSecretRef.Name, metaV1.GetOptions{})
+	if err != nil {
+		return err
+	}
 
 	// Only check secret for API key if it was not provided
 	// in the issuer configuration
-    apiKeyBytes,ok := sec.Data["apiKey"]
-    if cfg.APIkey == "" && !ok {
-        return fmt.Errorf("key %v not found in secret \"%s/%s\"", "apiKey",cfg.APIKeysSecretRef.Name,ns)
-    }
+	apiKeyBytes, ok := sec.Data["apiKey"]
+	if cfg.APIkey == "" && !ok {
+		return fmt.Errorf("key %v not found in secret \"%s/%s\"", "apiKey", cfg.APIKeysSecretRef.Name, ns)
+	}
 
 	// Only check secret for API secret key if it was not provided
 	// in the issuer configuration
-    apiSecretKeyBytes,ok := sec.Data["apiSecretKey"]
-    if cfg.APISecretKey == "" && !ok {
-        return fmt.Errorf("key %v not found in secret \"%s/%s\"", "apiSecretKey",cfg.APIKeysSecretRef.Name,ns) 
-    }
+	apiSecretKeyBytes, ok := sec.Data["apiSecretKey"]
+	if cfg.APISecretKey == "" && !ok {
+		return fmt.Errorf("key %v not found in secret \"%s/%s\"", "apiSecretKey", cfg.APIKeysSecretRef.Name, ns)
+	}
 
-    cfg.APIkey = string(apiKeyBytes)
-    cfg.APISecretKey = string(apiSecretKeyBytes)
+	cfg.APIkey = string(apiKeyBytes)
+	cfg.APISecretKey = string(apiSecretKeyBytes)
 
-    return nil
+	return nil
 }
 
 // Check if record exists
-func (c *porkbunDNSSolver) searchRecords(cfg *porkbunDNSProviderConfig, ch *v1alpha1.ChallengeRequest) (*porkbunRecord,error) {
-	request := c.restClient.NewRequest().EnableTrace();
-	apiEndpoint := fmt.Sprintf("%v/dns/retrieve/%v",porkbunURIEndpoint, strings.TrimRight(ch.ResolvedZone,"."))
-	
+func (c *porkbunDNSSolver) searchRecords(cfg *porkbunDNSProviderConfig, ch *v1alpha1.ChallengeRequest) (*porkbunRecord, error) {
+	request := c.restClient.NewRequest().EnableTrace()
+	apiEndpoint := fmt.Sprintf("%v/dns/retrieve/%v", porkbunURIEndpoint, strings.TrimRight(ch.ResolvedZone, "."))
+
 	body := map[string]string{
 		"secretapikey": cfg.APISecretKey,
-		"apikey": cfg.APIkey,
+		"apikey":       cfg.APIkey,
 	}
 
 	log.Println("Searching porkbun for existing record")
 
 	request.SetBody(body)
-	response,err := request.Post(apiEndpoint)
+	response, err := request.Post(apiEndpoint)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	fqdn := strings.TrimRight(ch.ResolvedFQDN, ".")
@@ -186,16 +186,16 @@ func (c *porkbunDNSSolver) searchRecords(cfg *porkbunDNSProviderConfig, ch *v1al
 	log.Printf("Requested Record: %v", fqdn)
 
 	for _, item := range result["records"].([]interface{}) {
-		if record,ok := item.(map[string]any); ok {
+		if record, ok := item.(map[string]any); ok {
 			if record["name"] == fqdn && record["content"] == ch.Key {
 				log.Printf("Existing record found: %v", record)
 				return &porkbunRecord{
-					ID: record["id"].(string),
-					Name: record["name"].(string),
-					Type: record["type"].(string),
+					ID:      record["id"].(string),
+					Name:    record["name"].(string),
+					Type:    record["type"].(string),
 					Content: record["content"].(string),
-					TTL: record["ttl"].(string),
-				},nil
+					TTL:     record["ttl"].(string),
+				}, nil
 			}
 		}
 	}
@@ -204,61 +204,61 @@ func (c *porkbunDNSSolver) searchRecords(cfg *porkbunDNSProviderConfig, ch *v1al
 	return nil, nil
 }
 
-func (c *porkbunDNSSolver) addTxtRecord(cfg *porkbunDNSProviderConfig, ch *v1alpha1.ChallengeRequest) (*porkbunRecord,error) {
+func (c *porkbunDNSSolver) addTxtRecord(cfg *porkbunDNSProviderConfig, ch *v1alpha1.ChallengeRequest) (*porkbunRecord, error) {
 	zone := strings.TrimRight(ch.ResolvedZone, ".")
 	fqdn := strings.TrimRight(ch.ResolvedFQDN, ".")
-	name := strings.TrimRight(strings.TrimSuffix(fqdn,zone), ".")
+	name := strings.TrimRight(strings.TrimSuffix(fqdn, zone), ".")
 
 	log.Printf("Adding TXT record: %v", fqdn)
-	apiEndpoint := fmt.Sprintf("%v/dns/create/%v",porkbunURIEndpoint, zone)
+	apiEndpoint := fmt.Sprintf("%v/dns/create/%v", porkbunURIEndpoint, zone)
 	log.Println(apiEndpoint)
 
 	body := &porkbunCreateUpdateRecord{
 		SecretAPIKey: cfg.APISecretKey,
-		APIKey: cfg.APIkey,
-		Name: name,
-		TTL: "600",
-		Type: "TXT",
-		Content: ch.Key,
+		APIKey:       cfg.APIkey,
+		Name:         name,
+		TTL:          "600",
+		Type:         "TXT",
+		Content:      ch.Key,
 	}
-	
-	jsonString,_ := json.Marshal(body)
-	response,err := c.restClient.NewRequest().SetBody(jsonString).Post(apiEndpoint)
+
+	jsonString, _ := json.Marshal(body)
+	response, err := c.restClient.NewRequest().SetBody(jsonString).Post(apiEndpoint)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	log.Println(response)
-	
+
 	if response.StatusCode() == 400 {
-		return nil,fmt.Errorf("error updating TXT record: %v", response)
+		return nil, fmt.Errorf("error updating TXT record: %v", response)
 	} else {
 		log.Println("TXT record updated successfully")
 	}
 
-	return nil,nil
+	return nil, nil
 }
 
-func (c *porkbunDNSSolver) updateTxtRecord(cfg *porkbunDNSProviderConfig, ch *v1alpha1.ChallengeRequest, r *porkbunRecord) (error) {
+func (c *porkbunDNSSolver) updateTxtRecord(cfg *porkbunDNSProviderConfig, ch *v1alpha1.ChallengeRequest, r *porkbunRecord) error {
 	zone := strings.TrimRight(ch.ResolvedZone, ".")
 	fqdn := strings.TrimRight(ch.ResolvedFQDN, ".")
-	name := strings.TrimRight(strings.TrimSuffix(fqdn,zone), ".")
+	name := strings.TrimRight(strings.TrimSuffix(fqdn, zone), ".")
 
 	log.Printf("Updating TXT record: %v", fqdn)
-	apiEndpoint := fmt.Sprintf("%v/dns/edit/%v/%v", porkbunURIEndpoint, zone,r.ID)
+	apiEndpoint := fmt.Sprintf("%v/dns/edit/%v/%v", porkbunURIEndpoint, zone, r.ID)
 	log.Println(apiEndpoint)
 
 	body := &porkbunCreateUpdateRecord{
 		SecretAPIKey: cfg.APISecretKey,
-		APIKey: cfg.APIkey,
-		Name: name,
-		TTL: "600",
-		Type: "TXT",
-		Content: ch.Key,
+		APIKey:       cfg.APIkey,
+		Name:         name,
+		TTL:          "600",
+		Type:         "TXT",
+		Content:      ch.Key,
 	}
 
-	jsonString,_ := json.Marshal(body)
-	response,err := c.restClient.NewRequest().SetBody(jsonString).Post(apiEndpoint)
+	jsonString, _ := json.Marshal(body)
+	response, err := c.restClient.NewRequest().SetBody(jsonString).Post(apiEndpoint)
 	if err != nil {
 		return err
 	}
@@ -272,21 +272,21 @@ func (c *porkbunDNSSolver) updateTxtRecord(cfg *porkbunDNSProviderConfig, ch *v1
 	return nil
 }
 
-func (c *porkbunDNSSolver) deleteTXTRecord(cfg *porkbunDNSProviderConfig, ch *v1alpha1.ChallengeRequest, r *porkbunRecord) (error) {
+func (c *porkbunDNSSolver) deleteTXTRecord(cfg *porkbunDNSProviderConfig, ch *v1alpha1.ChallengeRequest, r *porkbunRecord) error {
 	zone := strings.TrimRight(ch.ResolvedZone, ".")
 	fqdn := strings.TrimRight(ch.ResolvedFQDN, ".")
 
 	log.Printf("Deleting TXT record: %v", fqdn)
-	apiEndpoint := fmt.Sprintf("%v/dns/delete/%v/%v", porkbunURIEndpoint, zone,r.ID)
+	apiEndpoint := fmt.Sprintf("%v/dns/delete/%v/%v", porkbunURIEndpoint, zone, r.ID)
 	log.Println(apiEndpoint)
 
 	body := map[string]string{
 		"secretapikey": cfg.APISecretKey,
-		"apikey": cfg.APIkey,
+		"apikey":       cfg.APIkey,
 	}
 
-	jsonString,_ := json.Marshal(body)
-	response,err := c.restClient.NewRequest().SetBody(jsonString).Post(apiEndpoint)
+	jsonString, _ := json.Marshal(body)
+	response, err := c.restClient.NewRequest().SetBody(jsonString).Post(apiEndpoint)
 	if err != nil {
 		return err
 	}
@@ -327,25 +327,25 @@ func (c *porkbunDNSSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 		return err
 	}
 
-    if err := c.loadApiKeys(&cfg, ch); err != nil {
-        return err
-    }
+	if err := c.loadApiKeys(&cfg, ch); err != nil {
+		return err
+	}
 
 	// TODO: add code that sets a record in the DNS provider's console
-	var result *porkbunRecord;
-	if result,err = c.searchRecords(&cfg,ch); err != nil {
-		return err;
+	var result *porkbunRecord
+	if result, err = c.searchRecords(&cfg, ch); err != nil {
+		return err
 	}
 
 	if result != nil {
 		if result.Content != ch.Key {
-			err = c.updateTxtRecord(&cfg,ch,result)
+			err = c.updateTxtRecord(&cfg, ch, result)
 			if err != nil {
 				return err
 			}
 		}
 	} else {
-		_,err = c.addTxtRecord(&cfg, ch)
+		_, err = c.addTxtRecord(&cfg, ch)
 		if err != nil {
 			return err
 		}
@@ -370,13 +370,13 @@ func (c *porkbunDNSSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 		return err
 	}
 
-    if err := c.loadApiKeys(&cfg, ch); err != nil {
-        return err
-    }
+	if err := c.loadApiKeys(&cfg, ch); err != nil {
+		return err
+	}
 
-	var result *porkbunRecord;
-	if result,err = c.searchRecords(&cfg,ch); err != nil {
-		return err;
+	var result *porkbunRecord
+	if result, err = c.searchRecords(&cfg, ch); err != nil {
+		return err
 	}
 
 	if result != nil {
